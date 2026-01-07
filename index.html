@@ -31,9 +31,8 @@
   <div id="root"></div>
   
   <script type="text/babel">
-   import React, { useState, useEffect } from 'react';
-import { Moon, Sun, Plus, Trash2, Clock, Check, X } from 'lucide-react';
-
+const { useState, useEffect } = React;
+const { Moon, Sun, Plus, Trash2, Clock } = lucide;
 const PiwiApp = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [screen, setScreen] = useState('home');
