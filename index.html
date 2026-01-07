@@ -31,12 +31,532 @@
   <div id="root"></div>
   
   <script type="text/babel">
-    // COLLE ICI LE CODE REACT COMPLET DE L'ARTIFACT PIWI
-    // (Tout le contenu de PiwiApp depuis "import React..." jusqu'à "export default PiwiApp")
+   import React, { useState, useEffect } from 'react';
+import { Moon, Sun, Plus, Trash2, Clock, Check, X } from 'lucide-react';
+
+const PiwiApp = () => {
+  const [darkMode, setDarkMode] = useState(false);
+  const [screen, setScreen] = useState('home');
+  const [alarms, setAlarms] = useState([]);
+  const [currentAlarm, setCurrentAlarm] = useState(null);
+  const [editingAlarm, setEditingAlarm] = useState(null);
+  const [alarmStartTime, setAlarmStartTime] = useState(null);
+  const [currentProblem, setCurrentProblem] = useState(null);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [failedOnce, setFailedOnce] = useState(false);
+  const [problemsToSolve, setProblemsToSolve] = useState(1);
+  const [lastAttemptSuccess, setLastAttemptSuccess] = useState(false);
+
+  const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+  const problemsDB = {
+    1: [
+      { question: "Combien font 5 + 7 ?", answer: "12", time: 120 },
+      { question: "Quel est le double de 15 ?", answer: "30", time: 120 },
+      { question: "Combien font 20 - 8 ?", answer: "12", time: 120 },
+    ],
+    2: [
+      { question: "Si un train part à 8h et met 45 minutes, à quelle heure arrive-t-il ? (format: 8h45)", answer: "8h45", time: 180 },
+      { question: "Combien font 12 × 3 ?", answer: "36", time: 180 },
+      { question: "Quelle est la suite logique ? 2, 4, 6, 8, ?", answer: "10", time: 180 },
+    ],
+    3: [
+      { question: "Marie a 3 ans de plus que Paul. Paul a 12 ans. Quel âge a Marie ?", answer: "15", time: 240 },
+      { question: "Un panier contient 24 pommes. Tu en manges 1/3. Combien reste-t-il de pommes ?", answer: "16", time: 240 },
+      { question: "Quelle est la suite ? 1, 4, 9, 16, ?", answer: "25", time: 240 },
+    ],
+    4: [
+      { question: "Un livre coûte 15€. Tu as une réduction de 20%. Quel est le nouveau prix ? (format: 12)", answer: "12", time: 300 },
+      { question: "Dans une classe de 30 élèves, 2/5 sont des garçons. Combien y a-t-il de filles ?", answer: "18", time: 300 },
+      { question: "Si 5 ouvriers construisent un mur en 3 jours, combien de jours faudrait-il à 3 ouvriers ?", answer: "5", time: 300 },
+    ],
+    5: [
+      { question: "Un train de 200m traverse un tunnel de 800m à 72 km/h. Combien de temps (en secondes) reste-t-il dans le tunnel ?", answer: "50", time: 420 },
+      { question: "Pierre a deux fois l'âge de Marc. Dans 10 ans, Pierre aura 40 ans. Quel âge a Marc aujourd'hui ?", answer: "10", time: 420 },
+      { question: "Quelle est la suite ? 2, 6, 12, 20, 30, ?", answer: "42", time: 420 },
+    ]
+  };
+
+  useEffect(() => {
+    if (screen === 'problem' && timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (screen === 'problem' && timeLeft === 0) {
+      handleTimeout();
+    }
+  }, [timeLeft, screen]);
+
+  const getDifficultyLevel = (delaySeconds) => {
+    if (delaySeconds < 30) return 1;
+    if (delaySeconds < 60) return 2;
+    if (delaySeconds < 180) return 3;
+    if (delaySeconds < 300) return 4;
+    return 5;
+  };
+
+  const getRandomProblem = (level) => {
+    const problems = problemsDB[level];
+    return problems[Math.floor(Math.random() * problems.length)];
+  };
+
+  const addAlarm = () => {
+    setEditingAlarm({
+      id: Date.now(),
+      hour: 7,
+      minute: 0,
+      days: [1, 2, 3, 4, 5],
+      enabled: true,
+      label: 'Réveil'
+    });
+    setScreen('config');
+  };
+
+  const saveAlarm = () => {
+    if (editingAlarm.id) {
+      const exists = alarms.find(a => a.id === editingAlarm.id);
+      if (exists) {
+        setAlarms(alarms.map(a => a.id === editingAlarm.id ? editingAlarm : a));
+      } else {
+        setAlarms([...alarms, editingAlarm]);
+      }
+    }
+    setEditingAlarm(null);
+    setScreen('home');
+  };
+
+  const deleteAlarm = (id) => {
+    setAlarms(alarms.filter(a => a.id !== id));
+  };
+
+  const toggleAlarm = (id) => {
+    setAlarms(alarms.map(a => 
+      a.id === id ? { ...a, enabled: !a.enabled } : a
+    ));
+  };
+
+  const toggleDay = (dayIndex) => {
+    const days = editingAlarm.days.includes(dayIndex)
+      ? editingAlarm.days.filter(d => d !== dayIndex)
+      : [...editingAlarm.days, dayIndex];
+    setEditingAlarm({ ...editingAlarm, days });
+  };
+
+  const simulateAlarm = () => {
+    setCurrentAlarm(alarms[0] || { label: 'Réveil' });
+    setAlarmStartTime(Date.now());
+    setScreen('alarm');
+  };
+
+  const handleWakeUp = () => {
+    const delaySeconds = Math.floor((Date.now() - alarmStartTime) / 1000);
+    const level = getDifficultyLevel(delaySeconds);
+    const problem = getRandomProblem(level);
     
-    // Remplace juste la dernière ligne "export default PiwiApp;" par :
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<PiwiApp />);
+    setCurrentProblem({ ...problem, level, attempt: 1 });
+    setTimeLeft(problem.time);
+    setFailedOnce(false);
+    setScreen('problem');
+  };
+
+  const handleTimeout = () => {
+    if (!failedOnce) {
+      const easierLevel = Math.max(1, currentProblem.level - 1);
+      const easierProblem = getRandomProblem(easierLevel);
+      setCurrentProblem({ ...easierProblem, level: easierLevel, attempt: 2 });
+      setTimeLeft(Math.min(300, easierProblem.time));
+      setFailedOnce(true);
+    } else {
+      setProblemsToSolve(2);
+      setLastAttemptSuccess(false);
+      setScreen('result');
+    }
+  };
+
+  const submitAnswer = () => {
+    const isCorrect = userAnswer.toLowerCase().trim() === currentProblem.answer.toLowerCase().trim();
+    
+    if (isCorrect) {
+      setLastAttemptSuccess(true);
+      setScreen('result');
+    } else {
+      setLastAttemptSuccess(false);
+      handleTimeout();
+    }
+    setUserAnswer('');
+  };
+
+  const finishAlarm = () => {
+    setCurrentAlarm(null);
+    setCurrentProblem(null);
+    setUserAnswer('');
+    setScreen('home');
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const Owl = ({ className = "", sleeping = false }) => (
+    <svg className={className} viewBox="0 0 100 100" fill="none">
+      <circle cx="50" cy="50" r="35" fill={darkMode ? "#F59E0B" : "#FCD34D"} />
+      <circle cx="38" cy="45" r="8" fill="white" />
+      <circle cx="62" cy="45" r="8" fill="white" />
+      {sleeping ? (
+        <>
+          <line x1="34" y1="45" x2="42" y2="45" stroke="#1F2937" strokeWidth="2" />
+          <line x1="58" y1="45" x2="66" y2="45" stroke="#1F2937" strokeWidth="2" />
+        </>
+      ) : (
+        <>
+          <circle cx="38" cy="45" r="4" fill="#1F2937" />
+          <circle cx="62" cy="45" r="4" fill="#1F2937" />
+        </>
+      )}
+      <path d="M 45 55 Q 50 58 55 55" stroke="#F97316" strokeWidth="2" fill="none" />
+      <path d="M 50 25 L 45 15 M 50 25 L 55 15" stroke={darkMode ? "#F59E0B" : "#FCD34D"} strokeWidth="3" />
+    </svg>
+  );
+
+  return (
+    <div className={`min-h-screen transition-colors duration-300 ${
+      darkMode 
+        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white' 
+        : 'bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 text-gray-900'
+    }`}>
+      <div className="max-w-md mx-auto p-6">
+        
+        {screen === 'home' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Owl className="w-16 h-16" sleeping={false} />
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Piwi
+                </h1>
+              </div>
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className={`p-3 rounded-full transition-all ${
+                  darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-100'
+                } shadow-lg`}
+              >
+                {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-purple-600" />}
+              </button>
+            </div>
+
+            {alarms.length === 0 && (
+              <div className={`p-6 rounded-2xl ${
+                darkMode ? 'bg-gray-800' : 'bg-white'
+              } shadow-xl`}>
+                <div className="text-center space-y-3">
+                  <Owl className="w-20 h-20 mx-auto" />
+                  <p className="text-lg">
+                    Coucou ! 🦉 Je suis ton assistant Piwi. Ajoute ta première alarme pour commencer !
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {alarms.map(alarm => (
+                <div
+                  key={alarm.id}
+                  className={`p-5 rounded-2xl ${
+                    darkMode ? 'bg-gray-800' : 'bg-white'
+                  } shadow-lg transition-all hover:scale-[1.02]`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="text-4xl font-bold">
+                        {alarm.hour.toString().padStart(2, '0')}:{alarm.minute.toString().padStart(2, '0')}
+                      </div>
+                      <div className="text-sm opacity-70 mt-1">{alarm.label}</div>
+                      <div className="flex gap-1 mt-2">
+                        {alarm.days.map(d => (
+                          <span
+                            key={d}
+                            className={`text-xs px-2 py-1 rounded-full ${
+                              darkMode ? 'bg-gray-700' : 'bg-gray-100'
+                            }`}
+                          >
+                            {days[d]}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => deleteAlarm(alarm.id)}
+                        className="p-2 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => toggleAlarm(alarm.id)}
+                        className={`relative w-14 h-8 rounded-full transition-colors ${
+                          alarm.enabled ? 'bg-green-500' : darkMode ? 'bg-gray-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                            alarm.enabled ? 'translate-x-7' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={addAlarm}
+              className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] flex items-center justify-center gap-2 text-lg font-semibold"
+            >
+              <Plus className="w-6 h-6" />
+              Nouvelle alarme
+            </button>
+
+            {alarms.length > 0 && (
+              <button
+                onClick={simulateAlarm}
+                className={`w-full py-3 ${
+                  darkMode ? 'bg-gray-700' : 'bg-gray-200'
+                } rounded-xl hover:opacity-80 transition-all`}
+              >
+                🧪 Tester l'alarme
+              </button>
+            )}
+          </div>
+        )}
+
+        {screen === 'config' && editingAlarm && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <Owl className="w-12 h-12" />
+              <h2 className="text-2xl font-bold">Configurer l'alarme</h2>
+            </div>
+
+            <div className={`p-6 rounded-2xl ${
+              darkMode ? 'bg-gray-800' : 'bg-white'
+            } shadow-xl space-y-6`}>
+              
+              <div>
+                <label className="block text-sm font-semibold mb-3">Heure</label>
+                <div className="flex gap-4 justify-center">
+                  <select
+                    value={editingAlarm.hour}
+                    onChange={(e) => setEditingAlarm({ ...editingAlarm, hour: parseInt(e.target.value) })}
+                    className={`text-4xl font-bold p-4 rounded-xl ${
+                      darkMode ? 'bg-gray-700' : 'bg-gray-100'
+                    } focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                  >
+                    {[...Array(24)].map((_, i) => (
+                      <option key={i} value={i}>{i.toString().padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                  <span className="text-4xl font-bold">:</span>
+                  <select
+                    value={editingAlarm.minute}
+                    onChange={(e) => setEditingAlarm({ ...editingAlarm, minute: parseInt(e.target.value) })}
+                    className={`text-4xl font-bold p-4 rounded-xl ${
+                      darkMode ? 'bg-gray-700' : 'bg-gray-100'
+                    } focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                  >
+                    {[...Array(60)].map((_, i) => (
+                      <option key={i} value={i}>{i.toString().padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-3">Jours de la semaine</label>
+                <div className="flex gap-2 flex-wrap">
+                  {days.map((day, index) => (
+                    <button
+                      key={index}
+                      onClick={() => toggleDay(index)}
+                      className={`px-4 py-2 rounded-xl font-medium transition-all ${
+                        editingAlarm.days.includes(index)
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                          : darkMode ? 'bg-gray-700' : 'bg-gray-200'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-3">Nom de l'alarme</label>
+                <input
+                  type="text"
+                  value={editingAlarm.label}
+                  onChange={(e) => setEditingAlarm({ ...editingAlarm, label: e.target.value })}
+                  className={`w-full p-4 rounded-xl ${
+                    darkMode ? 'bg-gray-700' : 'bg-gray-100'
+                  } focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                  placeholder="Ex: Réveil bureau"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setEditingAlarm(null); setScreen('home'); }}
+                className={`flex-1 py-4 rounded-xl font-semibold ${
+                  darkMode ? 'bg-gray-700' : 'bg-gray-200'
+                } hover:opacity-80 transition-all`}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveAlarm}
+                className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {screen === 'alarm' && (
+          <div className="space-y-8 text-center animate-pulse">
+            <div className="mt-20">
+              <Owl className="w-32 h-32 mx-auto animate-bounce" />
+            </div>
+            <div>
+              <div className="text-6xl font-bold mb-4">
+                {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <div className="text-2xl opacity-70">
+                {currentAlarm?.label || 'Réveil'}
+              </div>
+            </div>
+            <button
+              onClick={handleWakeUp}
+              className="w-full py-6 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-2xl text-xl font-bold shadow-2xl hover:scale-105 transition-all"
+            >
+              Je me suis réveillé 😫
+            </button>
+            <p className="text-sm opacity-50">🔊 L'alarme sonne...</p>
+          </div>
+        )}
+
+        {screen === 'problem' && currentProblem && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Owl className="w-12 h-12" />
+                <div>
+                  <div className="text-sm opacity-70">Niveau {currentProblem.level}</div>
+                  <div className="text-sm font-semibold">
+                    {currentProblem.attempt === 2 ? '🔄 Problème de secours' : '🎯 Problème à résoudre'}
+                  </div>
+                </div>
+              </div>
+              <div className={`text-3xl font-bold ${
+                timeLeft < 30 ? 'text-red-500 animate-pulse' : ''
+              }`}>
+                <Clock className="w-8 h-8 inline mr-2" />
+                {formatTime(timeLeft)}
+              </div>
+            </div>
+
+            <div className={`p-8 rounded-2xl ${
+              darkMode ? 'bg-gray-800' : 'bg-white'
+            } shadow-xl`}>
+              <p className="text-xl leading-relaxed">
+                {currentProblem.question}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={userAnswer}
+                onChange={(e) => setUserAnswer(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && submitAnswer()}
+                placeholder="Ta réponse..."
+                className={`w-full p-5 text-xl rounded-xl ${
+                  darkMode ? 'bg-gray-800' : 'bg-white'
+                } shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500`}
+                autoFocus
+              />
+              <button
+                onClick={submitAnswer}
+                className="w-full py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
+              >
+                Valider ✅
+              </button>
+            </div>
+
+            <div className={`p-4 rounded-xl ${
+              darkMode ? 'bg-gray-800' : 'bg-blue-50'
+            } text-center`}>
+              <p className="text-sm">
+                💡 Prends ton temps et réfléchis bien !
+              </p>
+            </div>
+          </div>
+        )}
+
+        {screen === 'result' && (
+          <div className="space-y-8 text-center">
+            <div className="mt-12">
+              {lastAttemptSuccess ? (
+                <>
+                  <Owl className="w-32 h-32 mx-auto mb-6" />
+                  <div className="text-6xl mb-4">🎉</div>
+                  <h2 className="text-3xl font-bold mb-3">Bravo !</h2>
+                  <p className="text-xl opacity-80">
+                    Tu as réussi à résoudre le problème !
+                  </p>
+                  {problemsToSolve > 1 && (
+                    <p className="text-lg mt-4 opacity-70">
+                      Plus que {problemsToSolve - 1} problème(s) à résoudre !
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Owl className="w-32 h-32 mx-auto mb-6" sleeping />
+                  <div className="text-6xl mb-4">😴</div>
+                  <h2 className="text-3xl font-bold mb-3">Échec !</h2>
+                  <p className="text-xl opacity-80">
+                    Tu n'as pas réussi à résoudre les problèmes à temps.
+                  </p>
+                  <div className={`mt-6 p-6 rounded-xl ${
+                    darkMode ? 'bg-red-900/30' : 'bg-red-50'
+                  }`}>
+                    <p className="text-lg font-semibold">
+                      ⚠️ Pénalité : 2 problèmes au prochain réveil !
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={finishAlarm}
+              className="w-full py-5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl text-xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
+            >
+              Terminer
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<PiwiApp />);
   </script>
   
   <script>
